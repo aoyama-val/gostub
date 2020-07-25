@@ -29,20 +29,21 @@ func (g *Gostub) Run() {
 }
 
 func (g *Gostub) HandleStubRequest(w http.ResponseWriter, r *http.Request) {
+	notFoundResponse := "{ message: \"gostub: Resource not found.\" }\n"
 	pathPatternList := g.RecursiveGetFilePath(r.Method)
 	requestPath := r.URL.Path
 	result, pathParams, matchError := g.MatchRoute(pathPatternList, requestPath)
 	if matchError != nil {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Not found path content (%v)", requestPath)
+		fmt.Fprintf(w, notFoundResponse)
 		return
 	}
 	matchPattern := *result
 	contentPath := matchPattern + "/$" + strings.ToUpper(r.Method) + ".json"
 	content, readError := ioutil.ReadFile("." + contentPath)
 	if readError != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Invalid path content (%v)", contentPath)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, notFoundResponse)
 		return
 	}
 	list := new(models.ContentList)
@@ -57,6 +58,12 @@ func (g *Gostub) HandleStubRequest(w http.ResponseWriter, r *http.Request) {
 			g.SetContent(w, matchPattern, handler.Content)
 			return
 		}
+	}
+	// クエリーパラメータがついていたにも関わらずどのhandlerにも一致しなかった場合は404を返す
+	if strings.ToUpper(r.Method) == "GET" && len(reqParam) != 0 {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, notFoundResponse)
+		return
 	}
 	fmt.Printf("default pattern: %+v\n", list.Default.Body)
 	g.SetContent(w, matchPattern, list.Default)
