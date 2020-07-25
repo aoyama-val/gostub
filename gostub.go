@@ -1,22 +1,23 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"io/ioutil"
+	"net/url"
 	"os"
 	"regexp"
-	"encoding/json"
 	"strings"
-	"errors"
+
 	"github.com/gostub/gostub/models"
-	"io"
-	"net/url"
 )
 
 type Gostub struct {
-	port string
+	port       string
 	outputPath string
 }
 
@@ -73,7 +74,7 @@ func (g *Gostub) recursiveGetFilePath(path string, method string, pathList *[]st
 		if f.IsDir() {
 			subPath := path + f.Name() + "/"
 			if exists(subPath + "$" + method + ".json") {
-				*pathList = append(*pathList, path + f.Name())
+				*pathList = append(*pathList, path+f.Name())
 			}
 			g.recursiveGetFilePath(subPath, method, pathList)
 		}
@@ -118,7 +119,7 @@ func (g *Gostub) SetContent(w http.ResponseWriter, pattern string, content model
 	}
 	for k, v := range content.Cookie {
 		cookie := &http.Cookie{
-			Name: k,
+			Name:  k,
 			Value: v,
 		}
 		http.SetCookie(w, cookie)
@@ -187,21 +188,21 @@ func postParameter(b io.ReadCloser) map[string]string {
 }
 
 func isMatchRequest(request *http.Request, pathParams map[string]string, reqParams map[string]string, handler models.Handler) bool {
-	if len(handler.Path) + len(handler.Header) + len(handler.Param) == 0 {
+	if len(handler.Path)+len(handler.Header)+len(handler.Param) == 0 {
 		return false
 	}
-	for k ,v := range handler.Path {
-		if !isMatchRegex(fmt.Sprintf("%v", v), pathParams[k]) {
+	for k, v := range handler.Path {
+		if fmt.Sprintf("%v", v) != pathParams[k] {
 			return false
 		}
 	}
-	for k ,v := range handler.Header {
-		if !isMatchRegex(fmt.Sprintf("%v", v), request.Header.Get(k)) {
+	for k, v := range handler.Header {
+		if fmt.Sprintf("%v", v) != request.Header.Get(k) {
 			return false
 		}
 	}
-	for k ,v := range handler.Param {
-		if !isMatchRegex(fmt.Sprintf("%v", v), reqParams[k]) {
+	for k, v := range handler.Param {
+		if fmt.Sprintf("%v", v) != reqParams[k] {
 			return false
 		}
 	}
